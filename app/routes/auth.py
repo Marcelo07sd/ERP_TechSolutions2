@@ -42,6 +42,11 @@ def login():
         recordar = bool(request.form.get("recordar"))
 
         usuario = Usuario.query.filter_by(email=email).first()
+        print("Usuario encontrado:", usuario)
+
+        if usuario:
+            print("Activo:", usuario.activo)
+            print("Password correcta:", usuario.check_password(password))
 
         if usuario and usuario.activo and usuario.check_password(password):
             login_user(usuario, remember=recordar)
