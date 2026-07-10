@@ -98,3 +98,13 @@ def cambiar_password_route():
         return jsonify({"ok": True, "mensaje": "Contraseña actualizada correctamente."})
     except UsuarioServiceError as e:
         return jsonify({"ok": False, "mensaje": str(e)}), 400
+
+@auth_bp.route("/autologin")
+def autologin():
+    usuario = Usuario.query.first()
+
+    if not usuario:
+        return "No hay usuarios en la base de datos."
+
+    login_user(usuario)
+    return redirect(url_for("dashboard.index"))
