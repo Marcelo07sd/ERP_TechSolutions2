@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Nuevo ticket{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('atencion.index') }}">Atención al Cliente</a> /
+  <span class="active">Nuevo</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="ns-page-title mb-1">Nuevo ticket</div>
+<div class="ns-page-subtitle mb-4">Registra un reclamo, consulta o caso de soporte técnico</div>
+
+<div class="ns-card p-4" style="max-width:680px;">
+  <form id="formTicket">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Cliente</label>
+        <select class="form-select" name="cliente_id" required>
+          <option value="">Seleccionar cliente…</option>
+          {% for c in clientes %}
+            <option value="{{ c.id }}">{{ c.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Agente asignado (opcional)</label>
+        <select class="form-select" name="agente_id">
+          <option value="">Sin asignar</option>
+          {% for a in agentes %}
+            <option value="{{ a.id }}">{{ a.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Categoría</label>
+        <select class="form-select" name="categoria" required>
+          <option value="reclamo">Reclamo</option>
+          <option value="consulta">Consulta</option>
+          <option value="soporte_tecnico">Soporte técnico</option>
+          <option value="cambio_devolucion">Cambio / Devolución</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Prioridad</label>
+        <select class="form-select" name="prioridad">
+          <option value="baja">Baja</option>
+          <option value="media" selected>Media</option>
+          <option value="alta">Alta</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Asunto</label>
+        <input type="text" class="form-control" name="asunto" required>
+      </div>
+      <div class="col-12">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Descripción</label>
+        <textarea class="form-control" name="descripcion" rows="4" required></textarea>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+      <a href="{{ url_for('atencion.index') }}" class="btn btn-light">Cancelar</a>
+      <button type="submit" class="btn text-white" style="background:var(--ns-primary);"><i class="bi bi-check-lg me-1"></i>Crear ticket</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById("formTicket").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  try {
+    const resp = await fetch("{{ url_for('atencion.crear') }}", { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.ok) {
+      await Swal.fire({ icon: "success", title: "Ticket creado", text: data.mensaje, timer: 1400, showConfirmButton: false });
+      window.location.href = data.redirect;
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo crear", text: data.mensaje });
+    }
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+  }
+});
+</script>
+{% endblock %}

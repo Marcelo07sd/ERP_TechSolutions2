@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Pedidos{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Pedidos</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <div class="ns-page-title">Pedidos y Logística</div>
+  <div class="ns-page-subtitle">Seguimiento de entregas generadas a partir de las ventas</div>
+</div>
+
+<div class="ns-card p-3">
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" class="form-control form-control-sm" name="q" placeholder="Buscar por N° pedido o cliente…" value="{{ busqueda }}">
+    </div>
+    <div class="col-md-3">
+      <select class="form-select form-select-sm" name="estado">
+        <option value="">Todos los estados</option>
+        <option value="procesando" {{ 'selected' if estado == 'procesando' }}>Procesando</option>
+        <option value="en_camino" {{ 'selected' if estado == 'en_camino' }}>En camino</option>
+        <option value="entregado" {{ 'selected' if estado == 'entregado' }}>Entregado</option>
+        <option value="cancelado" {{ 'selected' if estado == 'cancelado' }}>Cancelado</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" type="submit"><i class="bi bi-search me-1"></i>Buscar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table ns-table align-middle mb-0">
+      <thead>
+        <tr><th>N° Pedido</th><th>Cliente</th><th>Ciudad</th><th>Transportista</th><th>Fecha</th><th>Estado</th><th class="text-end">Acciones</th></tr>
+      </thead>
+      <tbody>
+        {% for p in pedidos %}
+        <tr>
+          <td class="fw-semibold">{{ p.numero_pedido }}</td>
+          <td>{{ p.cliente.nombre_completo }}</td>
+          <td>{{ p.ciudad_envio or "—" }}</td>
+          <td>{{ p.transportista or "—" }}</td>
+          <td class="text-muted">{{ p.fecha_pedido.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% if p.estado.value == 'entregado' %}
+              <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);">Entregado</span>
+            {% elif p.estado.value == 'en_camino' %}
+              <span class="badge ns-badge" style="background:rgba(58,169,236,0.12); color:var(--ns-info);">En camino</span>
+            {% elif p.estado.value == 'cancelado' %}
+              <span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger);">Cancelado</span>
+            {% else %}
+              <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">Procesando</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('pedidos.detalle', pedido_id=p.id) }}" class="btn btn-sm btn-light border" title="Ver"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron pedidos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/paginacion.html" %}
+</div>
+{% endblock %}

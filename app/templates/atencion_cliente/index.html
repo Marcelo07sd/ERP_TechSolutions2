@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Atención al Cliente{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Atención al Cliente</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Atención al Cliente</div>
+    <div class="ns-page-subtitle">Reclamos, consultas y soporte técnico</div>
+  </div>
+  <a href="{{ url_for('atencion.nuevo') }}" class="btn btn-sm text-white" style="background:var(--ns-primary);">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo ticket
+  </a>
+</div>
+
+<div class="ns-card p-3">
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" class="form-control form-control-sm" name="q" placeholder="Buscar por código, asunto o cliente…" value="{{ busqueda }}">
+    </div>
+    <div class="col-md-3">
+      <select class="form-select form-select-sm" name="estado">
+        <option value="">Todos los estados</option>
+        <option value="abierto" {{ 'selected' if estado == 'abierto' }}>Abierto</option>
+        <option value="en_proceso" {{ 'selected' if estado == 'en_proceso' }}>En proceso</option>
+        <option value="cerrado" {{ 'selected' if estado == 'cerrado' }}>Cerrado</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select form-select-sm" name="prioridad">
+        <option value="">Toda prioridad</option>
+        <option value="baja" {{ 'selected' if prioridad == 'baja' }}>Baja</option>
+        <option value="media" {{ 'selected' if prioridad == 'media' }}>Media</option>
+        <option value="alta" {{ 'selected' if prioridad == 'alta' }}>Alta</option>
+        <option value="urgente" {{ 'selected' if prioridad == 'urgente' }}>Urgente</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" type="submit"><i class="bi bi-search me-1"></i>Buscar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table ns-table align-middle mb-0">
+      <thead><tr><th>Código</th><th>Asunto</th><th>Cliente</th><th>Prioridad</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td class="fw-semibold">{{ t.codigo }}</td>
+          <td>{{ t.asunto }}</td>
+          <td>{{ t.cliente.nombre_completo }}</td>
+          <td>
+            {% if t.prioridad.value == 'urgente' %}<span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger);">Urgente</span>
+            {% elif t.prioridad.value == 'alta' %}<span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">Alta</span>
+            {% elif t.prioridad.value == 'media' %}<span class="badge ns-badge" style="background:rgba(58,169,236,0.12); color:var(--ns-info);">Media</span>
+            {% else %}<span class="badge ns-badge" style="background:rgba(107,114,128,0.12); color:var(--ns-text-muted);">Baja</span>{% endif %}
+          </td>
+          <td>
+            {% if t.estado.value == 'cerrado' %}<span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);">Cerrado</span>
+            {% elif t.estado.value == 'en_proceso' %}<span class="badge ns-badge" style="background:rgba(58,169,236,0.12); color:var(--ns-info);">En proceso</span>
+            {% else %}<span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">Abierto</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('atencion.detalle', ticket_id=t.id) }}" class="btn btn-sm btn-light border" title="Ver"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No se encontraron tickets.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/paginacion.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Nueva venta{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('ventas.index') }}">Ventas</a> /
+  <span class="active">Nueva</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="ns-page-title mb-1">Nueva venta</div>
+<div class="ns-page-subtitle mb-4">Selecciona el cliente, agrega productos y confirma la venta</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="ns-card p-3 mb-3">
+      <h6 class="fw-bold mb-3">Datos de la venta</h6>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:0.85rem;">Cliente</label>
+          <select class="form-select" id="selCliente" required>
+            <option value="">Seleccionar cliente…</option>
+            {% for c in clientes %}
+              <option value="{{ c.id }}" data-direccion="{{ c.direccion or '' }}">{{ c.nombre_completo }} — {{ c.dni_ruc or 's/doc' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:0.85rem;">Método de pago</label>
+          <select class="form-select" id="selMetodoPago" required>
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="yape_plin">Yape / Plin</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="chkGenerarPedido" checked>
+            <label class="form-check-label" for="chkGenerarPedido" style="font-size:0.85rem;">Generar pedido de envío automáticamente</label>
+          </div>
+        </div>
+        <div class="col-12" id="wrapperDireccion">
+          <label class="form-label fw-semibold" style="font-size:0.85rem;">Dirección de envío</label>
+          <input type="text" class="form-control" id="txtDireccion" placeholder="Se autocompleta con la dirección del cliente">
+        </div>
+      </div>
+    </div>
+
+    <div class="ns-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">Productos</h6>
+        <div style="min-width:320px;">
+          <select class="form-select form-select-sm" id="selAgregarProducto">
+            <option value="">+ Agregar producto…</option>
+            {% for p in productos %}
+              <option value="{{ p.id }}" data-nombre="{{ p.nombre }}" data-sku="{{ p.sku }}" data-precio="{{ p.precio_venta }}" data-stock="{{ p.stock_actual }}">
+                {{ p.sku }} — {{ p.nombre }} (stock: {{ p.stock_actual }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0">
+          <thead>
+            <tr><th>Producto</th><th style="width:110px;">Cantidad</th><th>Precio unit.</th><th>Subtotal</th><th></th></tr>
+          </thead>
+          <tbody id="tbodyLineas">
+            <tr id="filaVacia"><td colspan="5" class="text-center text-muted py-4">Agrega productos usando el selector de arriba.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="ns-card p-3" style="position:sticky; top:calc(var(--ns-topbar-height) + 1rem);">
+      <h6 class="fw-bold mb-3">Resumen</h6>
+      <div class="d-flex justify-content-between mb-2" style="font-size:0.88rem;">
+        <span class="text-muted">Subtotal</span><span id="txtSubtotal">S/ 0.00</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2" style="font-size:0.88rem;">
+        <span class="text-muted">IGV (18%)</span><span id="txtIgv">S/ 0.00</span>
+      </div>
+      <hr>
+      <div class="d-flex justify-content-between mb-3">
+        <span class="fw-bold">Total</span><span class="fw-bold ns-display" style="font-size:1.3rem;" id="txtTotal">S/ 0.00</span>
+      </div>
+      <button class="btn w-100 text-white" style="background:var(--ns-primary);" id="btnConfirmarVenta">
+        <i class="bi bi-check-circle me-1"></i>Confirmar venta
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const IGV_RATE = 0.18;
+  const lineas = {}; // producto_id -> {nombre, sku, precio, cantidad, stockDisponible}
+  const tbody = document.getElementById("tbodyLineas");
+  const filaVacia = document.getElementById("filaVacia");
+
+  document.getElementById("selCliente").addEventListener("change", function () {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById("txtDireccion").value = opt.dataset.direccion || "";
+  });
+
+  document.getElementById("chkGenerarPedido").addEventListener("change", function () {
+    document.getElementById("wrapperDireccion").style.display = this.checked ? "block" : "none";
+  });
+
+  document.getElementById("selAgregarProducto").addEventListener("change", function () {
+    if (!this.value) return;
+    const opt = this.options[this.selectedIndex];
+    const id = this.value;
+
+    if (!lineas[id]) {
+      lineas[id] = {
+        nombre: opt.dataset.nombre,
+        sku: opt.dataset.sku,
+        precio: parseFloat(opt.dataset.precio),
+        stockDisponible: parseInt(opt.dataset.stock),
+        cantidad: 1,
+      };
+    } else {
+      lineas[id].cantidad += 1;
+    }
+    this.value = "";
+    render();
+  });
+
+  function formatoMoneda(n) {
+    return "S/ " + n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function render() {
+    const ids = Object.keys(lineas);
+    tbody.innerHTML = "";
+
+    if (ids.length === 0) {
+      tbody.appendChild(filaVacia);
+    } else {
+      let subtotal = 0;
+      ids.forEach((id) => {
+        const l = lineas[id];
+        const sub = l.precio * l.cantidad;
+        subtotal += sub;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><div class="fw-semibold">${l.nombre}</div><div class="text-muted" style="font-size:0.75rem;">${l.sku}</div></td>
+          <td><input type="number" min="1" max="${l.stockDisponible}" value="${l.cantidad}" class="form-control form-control-sm ns-input-cantidad" data-id="${id}" style="width:80px;"></td>
+          <td>${formatoMoneda(l.precio)}</td>
+          <td class="fw-semibold">${formatoMoneda(sub)}</td>
+          <td class="text-end"><button class="btn btn-sm btn-light border text-danger ns-btn-quitar" data-id="${id}"><i class="bi bi-x-lg"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const igv = subtotal * IGV_RATE;
+      document.getElementById("txtSubtotal").textContent = formatoMoneda(subtotal);
+      document.getElementById("txtIgv").textContent = formatoMoneda(igv);
+      document.getElementById("txtTotal").textContent = formatoMoneda(subtotal + igv);
+
+      tbody.querySelectorAll(".ns-input-cantidad").forEach((input) => {
+        input.addEventListener("change", function () {
+          const id = this.dataset.id;
+          let val = parseInt(this.value) || 1;
+          if (val > lineas[id].stockDisponible) {
+            Swal.fire({ icon: "warning", title: "Stock insuficiente", text: `Solo hay ${lineas[id].stockDisponible} unidades disponibles.` });
+            val = lineas[id].stockDisponible;
+          }
+          lineas[id].cantidad = Math.max(1, val);
+          render();
+        });
+      });
+      tbody.querySelectorAll(".ns-btn-quitar").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          delete lineas[this.dataset.id];
+          render();
+        });
+      });
+      return;
+    }
+    document.getElementById("txtSubtotal").textContent = formatoMoneda(0);
+    document.getElementById("txtIgv").textContent = formatoMoneda(0);
+    document.getElementById("txtTotal").textContent = formatoMoneda(0);
+  }
+
+  document.getElementById("btnConfirmarVenta").addEventListener("click", async function () {
+    const clienteId = document.getElementById("selCliente").value;
+    if (!clienteId) {
+      Swal.fire({ icon: "warning", title: "Falta el cliente", text: "Selecciona un cliente para continuar." });
+      return;
+    }
+    const ids = Object.keys(lineas);
+    if (ids.length === 0) {
+      Swal.fire({ icon: "warning", title: "Sin productos", text: "Agrega al menos un producto." });
+      return;
+    }
+
+    const payload = {
+      cliente_id: parseInt(clienteId),
+      metodo_pago: document.getElementById("selMetodoPago").value,
+      generar_pedido: document.getElementById("chkGenerarPedido").checked,
+      direccion_envio: document.getElementById("txtDireccion").value,
+      lineas: ids.map((id) => ({ producto_id: parseInt(id), cantidad: lineas[id].cantidad })),
+    };
+
+    this.disabled = true;
+    try {
+      const resp = await fetch("{{ url_for('ventas.crear') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        await Swal.fire({ icon: "success", title: "Venta registrada", text: data.mensaje, timer: 1600, showConfirmButton: false });
+        window.location.href = data.redirect;
+      } else {
+        Swal.fire({ icon: "error", title: "No se pudo registrar la venta", text: data.mensaje });
+        this.disabled = false;
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+      this.disabled = false;
+    }
+  });
+</script>
+{% endblock %}

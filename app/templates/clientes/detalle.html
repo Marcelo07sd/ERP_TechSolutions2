@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ cliente.nombre_completo }}{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('clientes.index') }}">Clientes</a> /
+  <span class="active">{{ cliente.nombre_completo }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">{{ cliente.nombre_completo }}</div>
+    <div class="ns-page-subtitle">{{ cliente.email }} · {{ cliente.dni_ruc or "Sin documento" }}</div>
+  </div>
+  <a href="{{ url_for('clientes.editar', cliente_id=cliente.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Editar</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="ns-card p-3 mb-3">
+      <h6 class="fw-bold mb-3">Información de contacto</h6>
+      <div class="text-muted" style="font-size:0.8rem;">Teléfono</div>
+      <div class="fw-semibold mb-2">{{ cliente.telefono or "—" }}</div>
+      <div class="text-muted" style="font-size:0.8rem;">Dirección</div>
+      <div class="fw-semibold mb-2">{{ cliente.direccion or "—" }}</div>
+      <div class="text-muted" style="font-size:0.8rem;">Ciudad</div>
+      <div class="fw-semibold mb-2">{{ cliente.ciudad or "—" }}</div>
+      <div class="text-muted" style="font-size:0.8rem;">Cliente desde</div>
+      <div class="fw-semibold">{{ cliente.fecha_registro.strftime('%d/%m/%Y') }}</div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="ns-card p-3 mb-3">
+      <h6 class="fw-bold mb-3">Historial de ventas ({{ cliente.ventas.count() }})</h6>
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0">
+          <thead><tr><th>N° Venta</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for v in ventas_recientes %}
+            <tr>
+              <td><a href="{{ url_for('ventas.detalle', venta_id=v.id) }}" class="fw-semibold text-decoration-none">{{ v.numero_venta }}</a></td>
+              <td class="text-muted">{{ v.fecha_venta.strftime('%d/%m/%Y') }}</td>
+              <td>{{ v.total | moneda }}</td>
+              <td class="text-capitalize">{{ v.estado.value }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Sin ventas registradas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Tickets de atención al cliente ({{ cliente.tickets_soporte.count() }})</h6>
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0">
+          <thead><tr><th>Código</th><th>Asunto</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for t in tickets_recientes %}
+            <tr>
+              <td><a href="{{ url_for('atencion.detalle', ticket_id=t.id) }}" class="fw-semibold text-decoration-none">{{ t.codigo }}</a></td>
+              <td>{{ t.asunto }}</td>
+              <td class="text-capitalize">{{ t.estado.value.replace('_',' ') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-center text-muted py-3">Sin tickets registrados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

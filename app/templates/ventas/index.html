@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Ventas{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Ventas</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Ventas</div>
+    <div class="ns-page-subtitle">Historial de transacciones comerciales</div>
+  </div>
+  <a href="{{ url_for('ventas.nueva') }}" class="btn btn-sm text-white" style="background:var(--ns-primary);">
+    <i class="bi bi-plus-lg me-1"></i>Nueva venta
+  </a>
+</div>
+
+<div class="ns-card p-3">
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" class="form-control form-control-sm" name="q" placeholder="Buscar por N° venta o cliente…" value="{{ busqueda }}">
+    </div>
+    <div class="col-md-3">
+      <select class="form-select form-select-sm" name="estado">
+        <option value="">Todos los estados</option>
+        <option value="completada" {{ 'selected' if estado == 'completada' }}>Completada</option>
+        <option value="pendiente" {{ 'selected' if estado == 'pendiente' }}>Pendiente</option>
+        <option value="anulada" {{ 'selected' if estado == 'anulada' }}>Anulada</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" type="submit"><i class="bi bi-search me-1"></i>Buscar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table ns-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>N° Venta</th>
+          <th>Cliente</th>
+          <th>Vendedor</th>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in ventas %}
+        <tr>
+          <td class="fw-semibold">{{ v.numero_venta }}</td>
+          <td>{{ v.cliente.nombre_completo }}</td>
+          <td>{{ v.vendedor.nombre }}</td>
+          <td class="text-muted">{{ v.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="fw-semibold">{{ v.total | moneda }}</td>
+          <td>
+            {% if v.estado.value == 'completada' %}
+              <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);">Completada</span>
+            {% elif v.estado.value == 'pendiente' %}
+              <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">Pendiente</span>
+            {% else %}
+              <span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger);">Anulada</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('ventas.detalle', venta_id=v.id) }}" class="btn btn-sm btn-light border" title="Ver detalle"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron ventas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/paginacion.html" %}
+</div>
+{% endblock %}

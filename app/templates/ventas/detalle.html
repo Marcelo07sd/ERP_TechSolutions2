@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Venta {{ venta.numero_venta }}{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('ventas.index') }}">Ventas</a> /
+  <span class="active">{{ venta.numero_venta }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Venta {{ venta.numero_venta }}</div>
+    <div class="ns-page-subtitle">{{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    {% if venta.estado.value == 'completada' %}
+      <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent); font-size:0.8rem;">Completada</span>
+      <button class="btn btn-sm btn-outline-danger" onclick="nsAnularVenta()"><i class="bi bi-x-circle me-1"></i>Anular venta</button>
+    {% elif venta.estado.value == 'pendiente' %}
+      <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning); font-size:0.8rem;">Pendiente</span>
+    {% else %}
+      <span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger); font-size:0.8rem;">Anulada</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Productos</h6>
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            {% for d in venta.detalles %}
+            <tr>
+              <td><div class="fw-semibold">{{ d.producto.nombre }}</div><div class="text-muted" style="font-size:0.75rem;">{{ d.producto.sku }}</div></td>
+              <td>{{ d.cantidad }}</td>
+              <td>{{ d.precio_unitario | moneda }}</td>
+              <td class="fw-semibold">{{ d.subtotal | moneda }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="ns-card p-3 mb-3">
+      <h6 class="fw-bold mb-3">Cliente</h6>
+      <div class="fw-semibold">{{ venta.cliente.nombre_completo }}</div>
+      <div class="text-muted" style="font-size:0.85rem;">{{ venta.cliente.email }}</div>
+      <div class="text-muted" style="font-size:0.85rem;">{{ venta.cliente.telefono or "Sin teléfono" }}</div>
+      <hr>
+      <div class="text-muted" style="font-size:0.8rem;">Vendedor</div>
+      <div class="fw-semibold">{{ venta.vendedor.nombre_completo }}</div>
+    </div>
+
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Resumen de pago</h6>
+      <div class="d-flex justify-content-between mb-2" style="font-size:0.88rem;">
+        <span class="text-muted">Subtotal</span><span>{{ venta.subtotal | moneda }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2" style="font-size:0.88rem;">
+        <span class="text-muted">IGV (18%)</span><span>{{ venta.igv | moneda }}</span>
+      </div>
+      <hr>
+      <div class="d-flex justify-content-between mb-3">
+        <span class="fw-bold">Total</span><span class="fw-bold ns-display" style="font-size:1.3rem;">{{ venta.total | moneda }}</span>
+      </div>
+      <div class="text-muted" style="font-size:0.8rem;">Método de pago</div>
+      <div class="fw-semibold text-capitalize">{{ venta.metodo_pago.value.replace('_', ' / ') }}</div>
+    </div>
+
+    {% if venta.pedido %}
+    <div class="ns-card p-3 mt-3">
+      <h6 class="fw-bold mb-3">Pedido asociado</h6>
+      <div class="fw-semibold">{{ venta.pedido.numero_pedido }}</div>
+      <div class="text-muted" style="font-size:0.85rem;">{{ venta.pedido.direccion_envio }}</div>
+      <div class="text-muted" style="font-size:0.8rem;">Estado: <span class="fw-semibold text-dark">{{ venta.pedido.estado.value.replace('_', ' ') }}</span></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function nsAnularVenta() {
+  Swal.fire({
+    title: "¿Anular esta venta?",
+    input: "text",
+    inputLabel: "Motivo de la anulación",
+    inputPlaceholder: "Ej. Cliente se arrepintió",
+    showCancelButton: true,
+    confirmButtonText: "Anular venta",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#e5484d",
+  }).then(async (res) => {
+    if (!res.isConfirmed) return;
+    const formData = new FormData();
+    formData.append("motivo", res.value || "Sin motivo especificado");
+    const resp = await fetch("{{ url_for('ventas.anular', venta_id=venta.id) }}", { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.ok) {
+      await Swal.fire({ icon: "success", title: "Venta anulada", text: data.mensaje, timer: 1600, showConfirmButton: false });
+      window.location.reload();
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo anular", text: data.mensaje });
+    }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Productos{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Productos</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Productos</div>
+    <div class="ns-page-subtitle">Catálogo de productos tecnológicos</div>
+  </div>
+  <a href="{{ url_for('productos.nuevo') }}" class="btn btn-sm text-white" style="background:var(--ns-primary);">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo producto
+  </a>
+</div>
+
+<div class="ns-card p-3">
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" class="form-control form-control-sm" name="q" placeholder="Buscar por nombre, SKU o marca…" value="{{ busqueda }}">
+    </div>
+    <div class="col-md-3">
+      <select class="form-select form-select-sm" name="categoria_id">
+        <option value="">Todas las categorías</option>
+        {% for cat in categorias %}
+          <option value="{{ cat.id }}" {{ 'selected' if categoria_id == cat.id }}>{{ cat.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 d-flex align-items-center">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="stock_bajo" value="1" id="stock_bajo" {{ 'checked' if solo_stock_bajo }}>
+        <label class="form-check-label" for="stock_bajo" style="font-size:0.85rem;">Solo stock bajo</label>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" type="submit"><i class="bi bi-search me-1"></i>Filtrar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table ns-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th>Precio venta</th>
+          <th>Stock</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+        <tr>
+          <td class="text-muted">{{ p.sku }}</td>
+          <td>
+            <div class="fw-semibold">{{ p.nombre }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">{{ p.marca }}</div>
+          </td>
+          <td>{{ p.categoria.nombre }}</td>
+          <td>{{ p.precio_venta | moneda }}</td>
+          <td>
+            {% if p.stock_bajo %}
+              <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">{{ p.stock_actual }} bajo</span>
+            {% else %}
+              <span class="fw-semibold">{{ p.stock_actual }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.activo %}
+              <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);">Activo</span>
+            {% else %}
+              <span class="badge ns-badge" style="background:rgba(107,114,128,0.12); color:var(--ns-text-muted);">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('productos.editar', producto_id=p.id) }}" class="btn btn-sm btn-light border" title="Editar"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-light border text-danger" title="Eliminar" onclick="nsEliminarProducto({{ p.id }}, '{{ p.nombre }}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/paginacion.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function nsEliminarProducto(id, nombre) {
+  nsConfirmarEliminacion(`Se eliminará el producto "${nombre}".`).then(async (res) => {
+    if (!res.isConfirmed) return;
+    const resp = await fetch(`/productos/${id}/eliminar`, { method: "POST" });
+    const data = await resp.json();
+    if (data.ok) {
+      Swal.fire({ icon: "success", title: "Eliminado", timer: 1200, showConfirmButton: false });
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo eliminar", text: data.mensaje });
+    }
+  });
+}
+</script>
+{% endblock %}

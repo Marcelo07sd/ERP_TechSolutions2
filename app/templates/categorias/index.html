@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Categorías{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Categorías</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Categorías</div>
+    <div class="ns-page-subtitle">Organiza el catálogo por categoría y subcategoría</div>
+  </div>
+  <button class="btn btn-sm text-white" style="background:var(--ns-primary);" onclick="nsAbrirModalCrear()">
+    <i class="bi bi-plus-lg me-1"></i>Nueva categoría
+  </button>
+</div>
+
+<div class="ns-card p-3">
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" class="form-control form-control-sm" name="q" placeholder="Buscar por nombre…" value="{{ busqueda }}">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" type="submit"><i class="bi bi-search me-1"></i>Buscar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table ns-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Categoría padre</th>
+          <th>Productos</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categorias %}
+        <tr>
+          <td class="fw-semibold">
+            {% if cat.categoria_padre_id %}<i class="bi bi-arrow-return-right text-muted me-1"></i>{% endif %}
+            {{ cat.nombre }}
+          </td>
+          <td class="text-muted">{{ cat.categoria_padre.nombre if cat.categoria_padre else "—" }}</td>
+          <td>{{ cat.productos.count() }}</td>
+          <td>
+            {% if cat.activo %}
+              <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);">Activa</span>
+            {% else %}
+              <span class="badge ns-badge" style="background:rgba(107,114,128,0.12); color:var(--ns-text-muted);">Inactiva</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-light border" title="Editar"
+              onclick='nsAbrirModalEditar({{ {"id": cat.id, "nombre": cat.nombre, "descripcion": cat.descripcion or "", "categoria_padre_id": cat.categoria_padre_id, "activo": cat.activo} | tojson }})'>
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-light border text-danger" title="Eliminar" onclick="nsEliminarCategoria({{ cat.id }}, '{{ cat.nombre }}')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No se encontraron categorías.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/paginacion.html" %}
+</div>
+
+<!-- Modal Crear/Editar -->
+<div class="modal fade" id="modalCategoria" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formCategoria">
+        <div class="modal-header">
+          <h5 class="modal-title" id="tituloModalCategoria">Nueva categoría</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="categoria_id" id="categoria_id">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">Nombre</label>
+            <input type="text" class="form-control" name="nombre" id="nombre" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">Descripción</label>
+            <textarea class="form-control" name="descripcion" id="descripcion" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">Categoría padre (opcional)</label>
+            <select class="form-select" name="categoria_padre_id" id="categoria_padre_id">
+              <option value="">— Ninguna (categoría raíz) —</option>
+              {% for padre in opciones_padre %}
+                <option value="{{ padre.id }}">{{ padre.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-check" id="wrapperActivo" style="display:none;">
+            <input class="form-check-input" type="checkbox" name="activo" id="activo" checked>
+            <label class="form-check-label" for="activo">Categoría activa</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn text-white" style="background:var(--ns-primary);">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const modalCategoria = new bootstrap.Modal(document.getElementById("modalCategoria"));
+
+function nsAbrirModalCrear() {
+  document.getElementById("tituloModalCategoria").textContent = "Nueva categoría";
+  document.getElementById("formCategoria").reset();
+  document.getElementById("categoria_id").value = "";
+  document.getElementById("wrapperActivo").style.display = "none";
+  modalCategoria.show();
+}
+
+function nsAbrirModalEditar(cat) {
+  document.getElementById("tituloModalCategoria").textContent = "Editar categoría";
+  document.getElementById("categoria_id").value = cat.id;
+  document.getElementById("nombre").value = cat.nombre;
+  document.getElementById("descripcion").value = cat.descripcion;
+  document.getElementById("categoria_padre_id").value = cat.categoria_padre_id || "";
+  document.getElementById("activo").checked = cat.activo;
+  document.getElementById("wrapperActivo").style.display = "block";
+  modalCategoria.show();
+}
+
+document.getElementById("formCategoria").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const id = document.getElementById("categoria_id").value;
+  const url = id ? `/categorias/${id}/editar` : "/categorias/crear";
+  const formData = new FormData(this);
+
+  try {
+    const resp = await fetch(url, { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.ok) {
+      await Swal.fire({ icon: "success", title: "Listo", text: data.mensaje, timer: 1400, showConfirmButton: false });
+      window.location.reload();
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo guardar", text: data.mensaje });
+    }
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+  }
+});
+
+function nsEliminarCategoria(id, nombre) {
+  nsConfirmarEliminacion(`Se eliminará la categoría "${nombre}".`).then(async (res) => {
+    if (!res.isConfirmed) return;
+    const resp = await fetch(`/categorias/${id}/eliminar`, { method: "POST" });
+    const data = await resp.json();
+    if (data.ok) {
+      Swal.fire({ icon: "success", title: "Eliminada", timer: 1200, showConfirmButton: false });
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo eliminar", text: data.mensaje });
+    }
+  });
+}
+</script>
+{% endblock %}

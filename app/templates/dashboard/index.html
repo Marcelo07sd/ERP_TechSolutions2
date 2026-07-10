@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Dashboard</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Buenos días, {{ current_user.nombre }}</div>
+    <div class="ns-page-subtitle">Resumen operativo de los últimos 30 días</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm text-white" style="background:var(--ns-primary);" onclick="window.location.href='{{ url_for('ventas.nueva') }}'"><i class="bi bi-plus-lg me-1"></i>Nueva venta</button>
+  </div>
+</div>
+
+<!-- KPI CARDS -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-4">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(47,111,237,0.1); color:var(--ns-primary);"><i class="bi bi-cash-coin"></i></div>
+      <div class="ns-kpi-value">{{ kpis.ventas_totales | moneda }}</div>
+      <div class="ns-kpi-label">Ventas (30 días)</div>
+      {% if kpis.crecimiento != 0 %}
+      <div class="ns-kpi-trend {{ 'up' if kpis.crecimiento > 0 else 'down' }}">
+        <i class="bi bi-{{ 'arrow-up' if kpis.crecimiento > 0 else 'arrow-down' }}-short"></i>
+        {{ kpis.crecimiento | abs }}% vs mes anterior
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-6 col-lg-4">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(0,184,148,0.1); color:var(--ns-accent);"><i class="bi bi-receipt"></i></div>
+      <div class="ns-kpi-value">{{ kpis.numero_ventas }}</div>
+      <div class="ns-kpi-label">N° de ventas</div>
+      <div class="ns-kpi-trend up">
+        <i class="bi bi-calculator"></i> Ticket prom.: {{ kpis.ticket_promedio | moneda }}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-4">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(41,194,102,0.1); color:rgb(41,194,102);"><i class="bi bi-boxes"></i></div>
+      <div class="ns-kpi-value">{{ kpis.valor_inventario | moneda }}</div>
+      <div class="ns-kpi-label">Valor en inventario</div>
+      <div class="ns-kpi-trend {{ 'down' if kpis.productos_stock_bajo > 0 else 'up' }}">
+        <i class="bi bi-exclamation-triangle"></i> {{ kpis.productos_stock_bajo }} productos con stock bajo
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(58,169,236,0.12); color:var(--ns-info);"><i class="bi bi-truck"></i></div>
+      <div class="ns-kpi-value">{{ kpis.pedidos_en_camino }}</div>
+      <div class="ns-kpi-label">Pedidos en camino</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(229,72,77,0.1); color:var(--ns-danger);"><i class="bi bi-headset"></i></div>
+      <div class="ns-kpi-value">{{ kpis.tickets_abiertos }}</div>
+      <div class="ns-kpi-label">Tickets abiertos</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(16,21,42,0.06); color:var(--ns-text);"><i class="bi bi-people"></i></div>
+      <div class="ns-kpi-value">{{ kpis.clientes_totales }}</div>
+      <div class="ns-kpi-label">Clientes activos</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="ns-kpi-card">
+      <div class="ns-kpi-icon" style="background:rgba(245,165,36,0.12); color:var(--ns-warning);"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="ns-kpi-value">{{ kpis.numero_ventas }}</div>
+      <div class="ns-kpi-label">Transacciones (30 días)</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="ns-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0 fw-bold">Ventas — últimos 7 días</h6>
+      </div>
+      <canvas id="chartVentas7Dias" height="100"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="ns-card p-3 h-100">
+      <h6 class="mb-3 fw-bold">Ventas por método de pago</h6>
+      <canvas id="chartMetodosPago" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="ns-card p-3 h-100">
+      <h6 class="mb-3 fw-bold">Ventas por categoría</h6>
+      <canvas id="chartVentasCategoria" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="ns-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0 fw-bold">Ventas mensuales — últimos 12 meses</h6>
+      </div>
+      <canvas id="chartVentasMensuales" height="140"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="ns-card p-3 h-100">
+      <h6 class="mb-3 fw-bold">Top productos más vendidos</h6>
+      <canvas id="chartTopProductos" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="ns-card p-3 h-100">
+      <h6 class="mb-3 fw-bold">Últimas ventas</h6>
+      <div class="table-responsive" style="max-height:280px; overflow-y:auto;">
+        <table class="table ns-table mb-0">
+          <thead><tr><th>N° Venta</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for venta in ultimas_ventas %}
+            <tr>
+              <td class="fw-semibold">{{ venta.numero_venta }}</td>
+              <td>{{ venta.cliente.nombre_completo }}</td>
+              <td>{{ venta.total | moneda }}</td>
+              <td>
+                {% if venta.estado.value == 'completada' %}
+                  <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);">Completada</span>
+                {% elif venta.estado.value == 'pendiente' %}
+                  <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">Pendiente</span>
+                {% else %}
+                  <span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger);">Anulada</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aún no hay ventas. Ejecuta <code>seed.py</code>.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if stock_critico %}
+<div class="row g-3">
+  <div class="col-12">
+    <div class="ns-card p-3">
+      <h6 class="mb-3 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-1"></i> Alertas de stock crítico</h6>
+      <div class="table-responsive">
+        <table class="table ns-table mb-0">
+          <thead><tr><th>Producto</th><th>SKU</th><th>Stock actual</th><th>Stock mínimo</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for p in stock_critico %}
+            <tr>
+              <td class="fw-semibold">{{ p.nombre }}</td>
+              <td>{{ p.sku }}</td>
+              <td class="fw-bold {{ 'text-danger' if p.stock_actual == 0 else 'text-warning' }}">{{ p.stock_actual }}</td>
+              <td>{{ p.stock_minimo }}</td>
+              <td>
+                {% if p.stock_actual == 0 %}
+                  <span class="badge ns-badge" style="background:rgba(229,72,77,0.15); color:var(--ns-danger);">Sin stock</span>
+                {% else %}
+                  <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning);">Stock bajo</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const COLORS = {
+  primary: '#2f6fed', accent: '#00b894', warning: '#f5a524',
+  danger: '#e5484d', info: '#3aa9ec', navy: '#10152a'
+};
+const COLOR_PALETTE = ['#2f6fed','#00b894','#f5a524','#e5484d','#3aa9ec','#6c5ce7','#fd79a8','#00cec9'];
+
+// --- Chart 1: Ventas últimos 7 días ---
+new Chart(document.getElementById('chartVentas7Dias'), {
+  type: 'line',
+  data: {
+    labels: {{ etiquetas_dias | tojson }},
+    datasets: [{
+      label: 'Ventas (S/)',
+      data: {{ valores_dias | tojson }},
+      borderColor: COLORS.primary,
+      backgroundColor: 'rgba(47,111,237,0.08)',
+      tension: 0.35, fill: true, pointRadius: 3,
+      pointBackgroundColor: COLORS.primary
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#eef0f6' } }, x: { grid: { display: false } } }
+  }
+});
+
+// --- Chart 2: Ventas por método de pago ---
+new Chart(document.getElementById('chartMetodosPago'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ mp_etiquetas | tojson }},
+    datasets: [{
+      data: {{ mp_valores | tojson }},
+      backgroundColor: {{ mp_colores | tojson }},
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } }
+    },
+    cutout: '60%'
+  }
+});
+
+// --- Chart 3: Ventas por categoría (doughnut) ---
+new Chart(document.getElementById('chartVentasCategoria'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ cat_etiquetas | tojson }},
+    datasets: [{
+      data: {{ cat_valores | tojson }},
+      backgroundColor: COLOR_PALETTE.slice(0, {{ cat_valores | length }}),
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } }
+    },
+    cutout: '55%'
+  }
+});
+
+// --- Chart 4: Ventas mensuales últimos 12 meses ---
+new Chart(document.getElementById('chartVentasMensuales'), {
+  type: 'bar',
+  data: {
+    labels: {{ vm_etiquetas | tojson }},
+    datasets: [{
+      label: 'Ventas (S/)',
+      data: {{ vm_valores | tojson }},
+      backgroundColor: 'rgba(47,111,237,0.65)',
+      borderColor: COLORS.primary,
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#eef0f6' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// --- Chart 5: Top productos más vendidos ---
+new Chart(document.getElementById('chartTopProductos'), {
+  type: 'bar',
+  data: {
+    labels: {{ top_nombres | tojson }},
+    datasets: [{
+      label: 'Cantidad vendida',
+      data: {{ top_cantidades | tojson }},
+      backgroundColor: 'rgba(0,184,148,0.7)',
+      borderColor: COLORS.accent,
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { beginAtZero: true, grid: { color: '#eef0f6' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

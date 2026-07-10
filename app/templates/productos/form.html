@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if producto else "Nuevo" }} producto{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('productos.index') }}">Productos</a> /
+  <span class="active">{{ "Editar" if producto else "Nuevo" }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="ns-page-title mb-1">{{ "Editar producto" if producto else "Nuevo producto" }}</div>
+<div class="ns-page-subtitle mb-4">Completa la información del producto</div>
+
+<div class="ns-card p-4" style="max-width:760px;">
+  <form id="formProducto">
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Nombre del producto</label>
+        <input type="text" class="form-control" name="nombre" value="{{ producto.nombre if producto else '' }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Categoría</label>
+        <select class="form-select" name="categoria_id" required>
+          <option value="">Seleccionar…</option>
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}" {{ 'selected' if producto and producto.categoria_id == cat.id }}>{{ cat.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Descripción</label>
+        <textarea class="form-control" name="descripcion" rows="2">{{ producto.descripcion if producto else '' }}</textarea>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Marca</label>
+        <input type="text" class="form-control" name="marca" value="{{ producto.marca if producto else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Modelo</label>
+        <input type="text" class="form-control" name="modelo" value="{{ producto.modelo if producto else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">URL de imagen (opcional)</label>
+        <input type="text" class="form-control" name="imagen_url" value="{{ producto.imagen_url if producto else '' }}">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Precio de compra (S/)</label>
+        <input type="number" step="0.01" min="0" class="form-control" name="precio_compra" value="{{ producto.precio_compra if producto else '' }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Precio de venta (S/)</label>
+        <input type="number" step="0.01" min="0" class="form-control" name="precio_venta" value="{{ producto.precio_venta if producto else '' }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Stock mínimo (alerta)</label>
+        <input type="number" min="0" class="form-control" name="stock_minimo" value="{{ producto.stock_minimo if producto else 5 }}">
+      </div>
+
+      {% if not producto %}
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Stock inicial</label>
+        <input type="number" min="0" class="form-control" name="stock_inicial" value="0">
+        <div class="form-text">Se registrará como una entrada de inventario.</div>
+      </div>
+      {% else %}
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Stock actual</label>
+        <input type="text" class="form-control" value="{{ producto.stock_actual }}" disabled>
+        <div class="form-text">Se modifica solo desde el módulo Inventario.</div>
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="activo" id="activo" {{ 'checked' if producto.activo }}>
+          <label class="form-check-label" for="activo">Producto activo</label>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+      <a href="{{ url_for('productos.index') }}" class="btn btn-light">Cancelar</a>
+      <button type="submit" class="btn text-white" style="background:var(--ns-primary);">
+        <i class="bi bi-check-lg me-1"></i>Guardar producto
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById("formProducto").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const url = {{ (url_for('productos.guardar', producto_id=producto.id) if producto else url_for('productos.guardar')) | tojson }};
+  const formData = new FormData(this);
+
+  try {
+    const resp = await fetch(url, { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.ok) {
+      await Swal.fire({ icon: "success", title: "Guardado", text: data.mensaje, timer: 1400, showConfirmButton: false });
+      window.location.href = data.redirect || "{{ url_for('productos.index') }}";
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo guardar", text: data.mensaje });
+    }
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+  }
+});
+</script>
+{% endblock %}

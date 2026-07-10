@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Inventario{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Inventario</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Inventario</div>
+    <div class="ns-page-subtitle">Kardex de movimientos y control de stock</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalAjuste"><i class="bi bi-sliders me-1"></i>Ajuste</button>
+    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalSalida"><i class="bi bi-box-arrow-up me-1"></i>Registrar salida</button>
+    <button class="btn btn-sm text-white" style="background:var(--ns-primary);" data-bs-toggle="modal" data-bs-target="#modalEntrada"><i class="bi bi-box-arrow-in-down me-1"></i>Registrar entrada</button>
+  </div>
+</div>
+
+{% if productos_stock_bajo %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-4" style="font-size:0.85rem;">
+  <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+  <div>
+    <strong>{{ productos_stock_bajo | length }} producto(s) con stock bajo:</strong>
+    {{ productos_stock_bajo[:6] | map(attribute='nombre') | join(', ') }}{{ '…' if productos_stock_bajo | length > 6 else '' }}
+  </div>
+</div>
+{% endif %}
+
+<div class="ns-card p-3">
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+      <select class="form-select form-select-sm" name="producto_id">
+        <option value="">Todos los productos</option>
+        {% for p in productos %}
+          <option value="{{ p.id }}" {{ 'selected' if producto_id == p.id }}>{{ p.sku }} — {{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select form-select-sm" name="tipo">
+        <option value="">Todos los tipos</option>
+        <option value="entrada" {{ 'selected' if tipo == 'entrada' }}>Entrada</option>
+        <option value="salida" {{ 'selected' if tipo == 'salida' }}>Salida</option>
+        <option value="ajuste" {{ 'selected' if tipo == 'ajuste' }}>Ajuste</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" type="submit"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table ns-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Producto</th>
+          <th>Tipo</th>
+          <th>Cantidad</th>
+          <th>Stock anterior → nuevo</th>
+          <th>Motivo</th>
+          <th>Usuario</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td class="text-muted">{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="fw-semibold">{{ m.producto.sku }}<div class="text-muted fw-normal" style="font-size:0.75rem;">{{ m.producto.nombre }}</div></td>
+          <td>
+            {% if m.tipo.value == 'entrada' %}
+              <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent);"><i class="bi bi-arrow-down-circle"></i> Entrada</span>
+            {% elif m.tipo.value == 'salida' %}
+              <span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger);"><i class="bi bi-arrow-up-circle"></i> Salida</span>
+            {% else %}
+              <span class="badge ns-badge" style="background:rgba(58,169,236,0.12); color:var(--ns-info);"><i class="bi bi-sliders"></i> Ajuste</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ m.cantidad }}</td>
+          <td class="text-muted">{{ m.stock_anterior }} → <span class="fw-semibold text-dark">{{ m.stock_nuevo }}</span></td>
+          <td>{{ m.motivo or "—" }}{% if m.referencia %} <span class="text-muted">({{ m.referencia }})</span>{% endif %}</td>
+          <td>{{ m.usuario.nombre_completo if m.usuario else "Sistema" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No hay movimientos registrados con estos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/paginacion.html" %}
+</div>
+
+{% macro selector_producto(id_select) %}
+<select class="form-select" name="producto_id" id="{{ id_select }}" required>
+  <option value="">Seleccionar producto…</option>
+  {% for p in productos %}
+    <option value="{{ p.id }}" data-stock="{{ p.stock_actual }}">{{ p.sku }} — {{ p.nombre }} (stock: {{ p.stock_actual }})</option>
+  {% endfor %}
+</select>
+{% endmacro %}
+
+<!-- Modal Entrada -->
+<div class="modal fade" id="modalEntrada" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form class="ns-form-movimiento" data-url="/inventario/entrada">
+        <div class="modal-header"><h5 class="modal-title">Registrar entrada de stock</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">{{ selector_producto("entrada_producto") }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:0.85rem;">Cantidad</label><input type="number" min="1" class="form-control" name="cantidad" required></div>
+          <div class="mb-1"><label class="form-label fw-semibold" style="font-size:0.85rem;">Motivo</label><input type="text" class="form-control" name="motivo" placeholder="Ej. Compra a proveedor" required></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn text-white" style="background:var(--ns-primary);">Registrar</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Salida -->
+<div class="modal fade" id="modalSalida" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form class="ns-form-movimiento" data-url="/inventario/salida">
+        <div class="modal-header"><h5 class="modal-title">Registrar salida de stock</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">{{ selector_producto("salida_producto") }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:0.85rem;">Cantidad</label><input type="number" min="1" class="form-control" name="cantidad" required></div>
+          <div class="mb-1"><label class="form-label fw-semibold" style="font-size:0.85rem;">Motivo</label><input type="text" class="form-control" name="motivo" placeholder="Ej. Producto dañado" required></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-danger">Registrar</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajuste -->
+<div class="modal fade" id="modalAjuste" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form class="ns-form-movimiento" data-url="/inventario/ajuste">
+        <div class="modal-header"><h5 class="modal-title">Ajuste manual de stock</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">{{ selector_producto("ajuste_producto") }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:0.85rem;">Nuevo stock (valor final)</label><input type="number" min="0" class="form-control" name="nuevo_stock" required></div>
+          <div class="mb-1"><label class="form-label fw-semibold" style="font-size:0.85rem;">Motivo</label><input type="text" class="form-control" name="motivo" placeholder="Ej. Conteo físico mensual" required></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-outline-secondary">Registrar ajuste</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll(".ns-form-movimiento").forEach((form) => {
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    try {
+      const resp = await fetch(this.dataset.url, { method: "POST", body: formData });
+      const data = await resp.json();
+      if (data.ok) {
+        await Swal.fire({ icon: "success", title: "Listo", text: data.mensaje, timer: 1400, showConfirmButton: false });
+        window.location.reload();
+      } else {
+        Swal.fire({ icon: "error", title: "No se pudo registrar", text: data.mensaje });
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> / <span class="active">Reportes</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Reportes</div>
+    <div class="ns-page-subtitle">Resumen general del negocio</div>
+  </div>
+  <form class="d-flex gap-2 align-items-center" method="get">
+    <label class="text-muted" style="font-size:0.85rem;">Período:</label>
+    <select name="periodo" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+      <option value="7" {{ 'selected' if periodo == '7' }}>Últimos 7 días</option>
+      <option value="30" {{ 'selected' if periodo == '30' }}>Últimos 30 días</option>
+      <option value="90" {{ 'selected' if periodo == '90' }}>Últimos 90 días</option>
+      <option value="365" {{ 'selected' if periodo == '365' }}>Último año</option>
+    </select>
+  </form>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="ns-card p-3 text-center">
+      <div class="text-muted" style="font-size:0.8rem;">Ventas realizadas</div>
+      <div class="fw-bold" style="font-size:1.6rem;">{{ resumen.total_ventas }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="ns-card p-3 text-center">
+      <div class="text-muted" style="font-size:0.8rem;">Ingresos totales</div>
+      <div class="fw-bold" style="font-size:1.6rem;">{{ resumen.total_ingresos|moneda }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="ns-card p-3 text-center">
+      <div class="text-muted" style="font-size:0.8rem;">Ticket promedio</div>
+      <div class="fw-bold" style="font-size:1.6rem;">{{ resumen.promedio_venta|moneda }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="ns-card p-3 text-center">
+      <div class="text-muted" style="font-size:0.8rem;">Anulaciones</div>
+      <div class="fw-bold" style="font-size:1.6rem; color:var(--ns-danger);">{{ resumen.total_anuladas }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-badge me-2"></i>Ventas por vendedor</h6>
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0" style="font-size:0.85rem;">
+          <thead><tr><th>Vendedor</th><th class="text-end">Ventas</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for v in ventas_por_vendedor %}
+            <tr>
+              <td>{{ v.nombre }} {{ v.apellido }}</td>
+              <td class="text-end">{{ v.cantidad }}</td>
+              <td class="text-end">{{ v.total|moneda }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-center text-muted">Sin datos en este período.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-box me-2"></i>Top productos más vendidos</h6>
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0" style="font-size:0.85rem;">
+          <thead><tr><th>Producto</th><th>SKU</th><th class="text-end">Cant.</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for p in top_productos %}
+            <tr>
+              <td>{{ p.nombre[:40] }}{{ '…' if p.nombre|length > 40 }}</td>
+              <td>{{ p.sku }}</td>
+              <td class="text-end">{{ p.cantidad }}</td>
+              <td class="text-end">{{ p.total|moneda }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted">Sin datos en este período.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-box-seam me-2"></i>Resumen de inventario</h6>
+      <dl class="row mb-0" style="font-size:0.88rem;">
+        <dt class="col-sm-7 text-muted">Productos activos</dt>
+        <dd class="col-sm-5 text-end fw-semibold">{{ resumen_inventario.total_productos }}</dd>
+        <dt class="col-sm-7 text-muted">Unidades en stock</dt>
+        <dd class="col-sm-5 text-end fw-semibold">{{ resumen_inventario.stock_total }}</dd>
+        <dt class="col-sm-7 text-muted">Stock bajo crítico</dt>
+        <dd class="col-sm-5 text-end fw-semibold" style="color:var(--ns-danger);">{{ resumen_inventario.stock_bajo }}</dd>
+        <dt class="col-sm-7 text-muted">Valor inventario</dt>
+        <dd class="col-sm-5 text-end fw-semibold">{{ resumen_inventario.valor_inventario|moneda }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-headset me-2"></i>Atención al cliente</h6>
+      <dl class="row mb-0" style="font-size:0.88rem;">
+        <dt class="col-sm-7 text-muted">Total tickets</dt>
+        <dd class="col-sm-5 text-end fw-semibold">{{ resumen_atencion.total }}</dd>
+        <dt class="col-sm-7 text-muted">Abiertos</dt>
+        <dd class="col-sm-5 text-end fw-semibold" style="color:var(--ns-warning);">{{ resumen_atencion.abiertos }}</dd>
+        <dt class="col-sm-7 text-muted">En proceso</dt>
+        <dd class="col-sm-5 text-end fw-semibold" style="color:var(--ns-primary);">{{ resumen_atencion.en_proceso }}</dd>
+        <dt class="col-sm-7 text-muted">Cerrados</dt>
+        <dd class="col-sm-5 text-end fw-semibold" style="color:var(--ns-accent);">{{ resumen_atencion.cerrados }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Clientes recientes</h6>
+      <ul class="list-unstyled mb-0" style="font-size:0.85rem;">
+        {% for c in clientes_recientes %}
+        <li class="py-1 border-bottom border-light">{{ c.nombre_completo }}<br><span class="text-muted" style="font-size:0.75rem;">{{ c.email }}</span></li>
+        {% else %}
+        <li class="text-muted">Sin clientes registrados.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

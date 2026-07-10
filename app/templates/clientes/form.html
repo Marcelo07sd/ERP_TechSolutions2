@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if cliente else "Nuevo" }} cliente{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('clientes.index') }}">Clientes</a> /
+  <span class="active">{{ "Editar" if cliente else "Nuevo" }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="ns-page-title mb-1">{{ "Editar cliente" if cliente else "Nuevo cliente" }}</div>
+<div class="ns-page-subtitle mb-4">Datos de contacto y ubicación del cliente</div>
+
+<div class="ns-card p-4" style="max-width:680px;">
+  <form id="formCliente">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Nombres</label>
+        <input type="text" class="form-control" name="nombre" value="{{ cliente.nombre if cliente else '' }}" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Apellidos</label>
+        <input type="text" class="form-control" name="apellido" value="{{ cliente.apellido if cliente else '' }}" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Correo electrónico</label>
+        <input type="email" class="form-control" name="email" value="{{ cliente.email if cliente else '' }}" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Teléfono</label>
+        <input type="text" class="form-control" name="telefono" value="{{ cliente.telefono if cliente else '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">DNI / RUC</label>
+        <input type="text" class="form-control" name="dni_ruc" value="{{ cliente.dni_ruc if cliente else '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Ciudad</label>
+        <input type="text" class="form-control" name="ciudad" value="{{ cliente.ciudad if cliente else '' }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">Dirección</label>
+        <input type="text" class="form-control" name="direccion" value="{{ cliente.direccion if cliente else '' }}">
+      </div>
+      {% if cliente %}
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="activo" id="activo" {{ 'checked' if cliente.activo }}>
+          <label class="form-check-label" for="activo">Cliente activo</label>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+      <a href="{{ url_for('clientes.index') }}" class="btn btn-light">Cancelar</a>
+      <button type="submit" class="btn text-white" style="background:var(--ns-primary);"><i class="bi bi-check-lg me-1"></i>Guardar cliente</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById("formCliente").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const url = {{ (url_for('clientes.guardar', cliente_id=cliente.id) if cliente else url_for('clientes.guardar')) | tojson }};
+  const formData = new FormData(this);
+  try {
+    const resp = await fetch(url, { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.ok) {
+      await Swal.fire({ icon: "success", title: "Guardado", text: data.mensaje, timer: 1400, showConfirmButton: false });
+      window.location.href = data.redirect || "{{ url_for('clientes.index') }}";
+    } else {
+      Swal.fire({ icon: "error", title: "No se pudo guardar", text: data.mensaje });
+    }
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+  }
+});
+</script>
+{% endblock %}

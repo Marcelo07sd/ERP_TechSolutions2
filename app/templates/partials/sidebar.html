@@ -1,0 +1,51 @@
+<aside class="ns-sidebar" id="nsSidebar">
+  <div class="ns-sidebar-brand">
+    <div class="ns-logo-mark">TS</div>
+    <div class="ns-brand-text">
+      TechSolutions <small>ERP · PERÚ S.A.C.</small>
+    </div>
+  </div>
+
+  <nav class="ns-nav">
+    <div class="ns-nav-section-title">Principal</div>
+    <a href="{{ url_for('dashboard.index') }}" class="ns-nav-item {{ 'active' if request.endpoint == 'dashboard.index' else '' }}">
+      <i class="bi bi-grid-1x2-fill"></i><span class="ns-nav-label">Dashboard</span>
+    </a>
+
+    <div class="ns-nav-section-title">Comercial</div>
+    <a href="{{ url_for('ventas.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'ventas' else '' }}">
+      <i class="bi bi-cart-check-fill"></i><span class="ns-nav-label">Ventas</span></a>
+    <a href="{{ url_for('pedidos.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'pedidos' else '' }}">
+      <i class="bi bi-bag-check-fill"></i><span class="ns-nav-label">Pedidos</span></a>
+    <a href="{{ url_for('clientes.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'clientes' else '' }}">
+      <i class="bi bi-people-fill"></i><span class="ns-nav-label">Clientes</span></a>
+
+    <div class="ns-nav-section-title">Catálogo &amp; Stock</div>
+    <a href="{{ url_for('productos.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'productos' else '' }}">
+      <i class="bi bi-box-seam-fill"></i><span class="ns-nav-label">Productos</span></a>
+    <a href="{{ url_for('categorias.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'categorias' else '' }}">
+      <i class="bi bi-tags-fill"></i><span class="ns-nav-label">Categorías</span></a>
+    <a href="{{ url_for('inventario.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'inventario' else '' }}">
+      <i class="bi bi-clipboard-data-fill"></i><span class="ns-nav-label">Inventario</span></a>
+    <a href="{{ url_for('pedidos.index') }}" class="ns-nav-item"><i class="bi bi-truck"></i><span class="ns-nav-label">Logística</span></a>
+
+    <div class="ns-nav-section-title">Soporte &amp; Control</div>
+    <a href="{{ url_for('atencion.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'atencion' else '' }}">
+      <i class="bi bi-headset"></i><span class="ns-nav-label">Atención al Cliente</span></a>
+    <a href="{{ url_for('solicitudes.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'solicitudes' else '' }}"><i class="bi bi-inbox-fill"></i><span class="ns-nav-label">Solicitudes web</span></a>
+    <a href="{{ url_for('reportes.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'reportes' else '' }}"><i class="bi bi-bar-chart-fill"></i><span class="ns-nav-label">Reportes</span></a>
+    <a href="{{ url_for('auditoria.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'auditoria' else '' }}">
+      <i class="bi bi-shield-lock-fill"></i><span class="ns-nav-label">Auditoría</span></a>
+
+    {% if current_user.is_authenticated and current_user.rol.nombre == 'Administrador' %}
+    <div class="ns-nav-section-title">Administración</div>
+    <a href="{{ url_for('usuarios.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'usuarios' else '' }}"><i class="bi bi-person-badge-fill"></i><span class="ns-nav-label">Usuarios</span></a>
+    <a href="{{ url_for('roles.index') }}" class="ns-nav-item {{ 'active' if request.blueprint == 'roles' else '' }}"><i class="bi bi-key-fill"></i><span class="ns-nav-label">Roles</span></a>
+    {% endif %}
+  </nav>
+
+  <div class="ns-sidebar-footer">
+    TechSolutions ERP v1.0 <br> Proyecto académico
+  </div>
+</aside>
+<div class="ns-overlay" id="nsOverlay"></div>

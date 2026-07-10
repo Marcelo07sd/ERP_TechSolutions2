@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Pedido {{ pedido.numero_pedido }}{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('pedidos.index') }}">Pedidos</a> /
+  <span class="active">{{ pedido.numero_pedido }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="ns-page-title mb-1">Pedido {{ pedido.numero_pedido }}</div>
+<div class="ns-page-subtitle mb-4">Venta asociada: <a href="{{ url_for('ventas.detalle', venta_id=pedido.venta_id) }}">{{ pedido.venta.numero_venta }}</a></div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Datos de envío</h6>
+      <div class="text-muted" style="font-size:0.8rem;">Dirección</div>
+      <div class="fw-semibold mb-2">{{ pedido.direccion_envio }}</div>
+      <div class="text-muted" style="font-size:0.8rem;">Ciudad</div>
+      <div class="fw-semibold mb-2">{{ pedido.ciudad_envio or "—" }}</div>
+      <div class="row">
+        <div class="col-6">
+          <div class="text-muted" style="font-size:0.8rem;">Transportista</div>
+          <div class="fw-semibold mb-2">{{ pedido.transportista or "Sin asignar" }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted" style="font-size:0.8rem;">N° de seguimiento</div>
+          <div class="fw-semibold mb-2">{{ pedido.numero_seguimiento or "—" }}</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-6">
+          <div class="text-muted" style="font-size:0.8rem;">Fecha del pedido</div>
+          <div class="fw-semibold">{{ pedido.fecha_pedido.strftime('%d/%m/%Y %H:%M') }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted" style="font-size:0.8rem;">Entrega estimada</div>
+          <div class="fw-semibold">{{ pedido.fecha_entrega_estimada.strftime('%d/%m/%Y') if pedido.fecha_entrega_estimada else "—" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Estado del pedido</h6>
+
+      <div class="d-flex align-items-center gap-2 mb-4">
+        {% for paso in pasos %}
+          <div class="text-center flex-fill">
+            <div class="mx-auto rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:30px;height:30px;
+                 background:{{ 'var(--ns-primary)' if loop.index0 <= indice_estado and pedido.estado.value != 'cancelado' else '#e7eaf3' }};
+                 color:{{ '#fff' if loop.index0 <= indice_estado and pedido.estado.value != 'cancelado' else '#9aa1b5' }};">
+              <i class="bi bi-check-lg" style="font-size:0.8rem;"></i>
+            </div>
+            <div class="text-muted mt-1" style="font-size:0.68rem; text-transform:capitalize;">{{ paso.replace('_',' ') }}</div>
+          </div>
+          {% if not loop.last %}<div class="flex-fill border-top" style="margin-top:-14px;"></div>{% endif %}
+        {% endfor %}
+      </div>
+
+      {% if pedido.estado.value == 'cancelado' %}
+        <div class="alert alert-danger py-2" style="font-size:0.85rem;">Este pedido fue cancelado.</div>
+      {% elif pedido.estado.value == 'entregado' %}
+        <div class="alert alert-success py-2" style="font-size:0.85rem;">Entregado el {{ pedido.fecha_entrega_real.strftime('%d/%m/%Y %H:%M') if pedido.fecha_entrega_real else '' }}.</div>
+      {% else %}
+      <form id="formCambiarEstado">
+        <div class="mb-2">
+          <label class="form-label fw-semibold" style="font-size:0.85rem;">Nuevo estado</label>
+          <select class="form-select" name="estado" required>
+            {% if pedido.estado.value == 'procesando' %}
+              <option value="en_camino">En camino</option>
+              <option value="cancelado">Cancelado</option>
+            {% elif pedido.estado.value == 'en_camino' %}
+              <option value="entregado">Entregado</option>
+              <option value="cancelado">Cancelado</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold" style="font-size:0.85rem;">Transportista</label>
+          <input type="text" class="form-control" name="transportista" value="{{ pedido.transportista or '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:0.85rem;">N° de seguimiento</label>
+          <input type="text" class="form-control" name="numero_seguimiento" value="{{ pedido.numero_seguimiento or '' }}">
+        </div>
+        <button type="submit" class="btn w-100 text-white" style="background:var(--ns-primary);">Actualizar estado</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const formEstado = document.getElementById("formCambiarEstado");
+if (formEstado) {
+  formEstado.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    try {
+      const resp = await fetch("{{ url_for('pedidos.cambiar_estado', pedido_id=pedido.id) }}", { method: "POST", body: formData });
+      const data = await resp.json();
+      if (data.ok) {
+        await Swal.fire({ icon: "success", title: "Actualizado", text: data.mensaje, timer: 1400, showConfirmButton: false });
+        window.location.reload();
+      } else {
+        Swal.fire({ icon: "error", title: "No se pudo actualizar", text: data.mensaje });
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error de conexión", text: "Intenta nuevamente." });
+    }
+  });
+}
+</script>
+{% endblock %}

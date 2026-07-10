@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Solicitud {{ solicitud.codigo }}{% endblock %}
+
+{% block breadcrumb %}
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('dashboard.index') }}">Inicio</a> /
+  <a href="{{ url_for('solicitudes.index') }}">Solicitudes</a> /
+  <span class="active">{{ solicitud.codigo }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div>
+    <div class="ns-page-title">Solicitud {{ solicitud.codigo }}</div>
+    <div class="ns-page-subtitle">{{ solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</div>
+  </div>
+  <div>
+    {% if solicitud.estado.value == 'pendiente' %}
+      <span class="badge ns-badge" style="background:rgba(245,165,36,0.15); color:var(--ns-warning); font-size:0.8rem;">Pendiente</span>
+    {% elif solicitud.estado.value == 'aprobado' %}
+      <span class="badge ns-badge" style="background:rgba(0,184,148,0.12); color:var(--ns-accent); font-size:0.8rem;">Aprobado</span>
+    {% else %}
+      <span class="badge ns-badge" style="background:rgba(229,72,77,0.12); color:var(--ns-danger); font-size:0.8rem;">Rechazado</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Productos solicitados</h6>
+      <div class="table-responsive">
+        <table class="table ns-table align-middle mb-0">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            {% for d in solicitud.productos_json %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ d.nombre }}</div>
+                <div class="text-muted" style="font-size:0.75rem;">{{ d.sku }}</div>
+              </td>
+              <td>{{ d.cantidad }}</td>
+              <td>{{ d.precio_unitario | moneda }}</td>
+              <td class="fw-semibold">{{ (d.cantidad * d.precio_unitario) | moneda }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3" class="text-end fw-semibold">Total estimado</td><td class="fw-bold">{{ solicitud.total_estimado | moneda }}</td></tr>
+          </tfoot>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="ns-card p-3 mb-3">
+      <h6 class="fw-bold mb-3">Cliente</h6>
+      <div class="fw-semibold">{{ solicitud.cliente_nombre }}</div>
+      <div class="text-muted" style="font-size:0.85rem;">{{ solicitud.cliente_email }}</div>
+      <div class="text-muted" style="font-size:0.85rem;">{{ solicitud.cliente_telefono or "Sin teléfono" }}</div>
+      {% if solicitud.cliente_direccion %}<hr><div class="text-muted" style="font-size:0.8rem;">Dirección</div><div>{{ solicitud.cliente_direccion }}{% if solicitud.cliente_ciudad %}, {{ solicitud.cliente_ciudad }}{% endif %}</div>{% endif %}
+      {% if solicitud.comentario %}<hr><div class="text-muted" style="font-size:0.8rem;">Comentario</div><div style="font-size:0.9rem;">{{ solicitud.comentario }}</div>{% endif %}
+    </div>
+
+    {% if solicitud.estado.value == 'pendiente' %}
+    <div class="ns-card p-3">
+      <h6 class="fw-bold mb-3">Acciones</h6>
+
+      <form method="post" action="{{ url_for('solicitudes.aprobar', solicitud_id=solicitud.id) }}" class="mb-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm w-100 text-white" style="background:var(--ns-accent);"
+                onclick="return confirm('¿Crear venta y pedido a partir de esta solicitud? Se descontará stock automáticamente.')">
+          <i class="bi bi-check-circle me-1"></i>Aprobar y generar venta
+        </button>
+      </form>
+
+      <button class="btn btn-sm btn-outline-danger w-100" id="btnRechazar">
+        <i class="bi bi-x-circle me-1"></i>Rechazar solicitud
+      </button>
+    </div>
+    {% endif %}
+
+    {% if solicitud.estado.value == 'rechazado' and solicitud.motivo_rechazo %}
+    <div class="ns-card p-3 mt-3">
+      <h6 class="fw-bold mb-3">Motivo de rechazo</h6>
+      <p class="mb-0">{{ solicitud.motivo_rechazo }}</p>
+    </div>
+    {% endif %}
+
+    {% if solicitud.estado.value == 'aprobado' and solicitud.venta %}
+    <div class="ns-card p-3 mt-3">
+      <h6 class="fw-bold mb-3">Venta generada</h6>
+      <div class="fw-semibold">{{ solicitud.venta.numero_venta }}</div>
+      <div class="text-muted" style="font-size:0.85rem;">Total: {{ solicitud.venta.total | moneda }}</div>
+      <a href="{{ url_for('ventas.detalle', venta_id=solicitud.venta.id) }}" class="btn btn-sm btn-outline-primary mt-2 w-100">
+        <i class="bi bi-eye me-1"></i>Ver venta
+      </a>
+      {% if solicitud.venta.pedido %}
+      <a href="{{ url_for('pedidos.detalle', pedido_id=solicitud.venta.pedido.id) }}" class="btn btn-sm btn-outline-primary mt-1 w-100">
+        <i class="bi bi-truck me-1"></i>Ver pedido
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btnRechazar')?.addEventListener('click', async function() {
+  const { value: motivo } = await Swal.fire({
+    title: 'Rechazar solicitud',
+    input: 'textarea',
+    inputLabel: 'Motivo del rechazo',
+    inputPlaceholder: 'Ej. Producto sin stock',
+    showCancelButton: true,
+    confirmButtonText: 'Rechazar',
+    confirmButtonColor: '#e5484d',
+    cancelButtonText: 'Cancelar',
+    inputValidator: (val) => !val ? 'Debes escribir un motivo' : null,
+  });
+  if (!motivo) return;
+  const formData = new FormData();
+  formData.append('motivo', motivo);
+  formData.append('csrf_token', '{{ csrf_token() }}');
+  const resp = await fetch('{{ url_for("solicitudes.rechazar", solicitud_id=solicitud.id) }}', { method: 'POST', body: formData });
+  if (resp.redirected) { window.location.href = resp.url; return; }
+  window.location.reload();
+});
+</script>
+{% endblock %}

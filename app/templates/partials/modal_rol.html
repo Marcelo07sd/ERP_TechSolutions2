@@ -1,0 +1,27 @@
+<div class="modal fade" id="modalRol" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="rolModalTitle">Nuevo rol</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="rolForm">
+          <input type="hidden" id="rolId" name="rol_id" value="">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">Nombre del rol</label>
+            <input type="text" class="form-control" id="rolNombre" name="nombre" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">Descripción</label>
+            <textarea class="form-control" id="rolDescripcion" name="descripcion" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" form="rolForm" class="btn text-white" style="background:var(--ns-primary);">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
