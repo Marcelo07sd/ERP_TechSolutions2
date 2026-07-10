@@ -186,6 +186,22 @@
       actualizar();
     }));
 
+    checks.forEach(c => c.addEventListener('change', function() {
+
+    const fila = this.closest('tr');
+  const cantInput = fila.querySelector('.cant-input');
+
+  if (this.checked) {
+      if (Number(cantInput.value) === 0) {
+          cantInput.value = 1;
+      }
+  } else {
+      cantInput.value = 0;
+  }
+
+  actualizar();
+}));
+
     cants.forEach(c => c.addEventListener('input', function() {
       const check = fila(this).querySelector('.producto-check');
       const val = parseInt(this.value) || 0;
