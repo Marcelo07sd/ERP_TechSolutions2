@@ -49,9 +49,12 @@ class Config:
                 )
             # Render entrega a veces 'postgres://', SQLAlchemy 1.4+/2.x
             # requiere el prefijo 'postgresql://'
-            if database_url.startswith("postgres://"):
+            if database_url.startswith("postgres"):
+                if "+psycopg" not in database_url:
                 database_url = database_url.replace(
-                    "postgres://", "postgresql+psycopg://", 1
+                "postgresql://" if "postgresql://" in database_url else "postgres://",
+                "postgresql+psycopg://",
+                1,
                 )
             return database_url
 
