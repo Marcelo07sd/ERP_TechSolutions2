@@ -2,6 +2,7 @@ services:
   - type: web
     name: techsolutions-erp
     env: python
+    pythonVersion: 3.12.3
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn run:app --worker-class sync --workers 2 --timeout 120 --access-logfile -
     releaseCommand: flask db upgrade
