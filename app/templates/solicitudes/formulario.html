@@ -160,7 +160,7 @@
     function actualizar() {
       let total = 0, count = 0;
       checks.forEach(c => {
-        const cantInput = c.closest('.producto-item').querySelector('.cant-input');
+        const cantInput = c.closest('tr').querySelector('.cant-input');
         const precio = parseFloat(c.dataset.precio) || 0;
         const cant = parseInt(cantInput.value) || 0;
         if (c.checked && cant > 0) {
